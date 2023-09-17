@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Image Capture</title>
+</head>
+<body>
+    <!--PART 1
+        <h1>Image Upload</h1>
+    <form method="POST" enctype="multipart/form-data">
+        <input type="file" name="image" accept="image/*">
+        <input type="submit" value="Submit">
+    </form>
+    --> 
+    <!-- PART 2B -->
+    <h1>Image Capture</h1>
+    {% if session.google_token %}
+        <p>Welcome, {{ session.user_info.name }} (<a href="/logout">Logout</a>)</p>
+        <div id="camera">
+            <video id="video" autoplay></video>
+            <button id="capture">Capture Photo</button>
+        </div>
+        <canvas id="canvas" style="display: none;"></canvas>
+        <img id="captured-image" style="display: none;">
+        <button id="upload" style="display: none;">Upload Photo</button>
+    {% else %}
+        <p>Please <a href="/login">login with Google</a> to capture and upload photos.</p>
+    {% endif %}
+    
+    <script>
+        const video = document.getElementById('video');
+        const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext('2d');
+        const capturedImage = document.getElementById('captured-image');
+        const captureButton = document.getElementById('capture');
+        const uploadButton = document.getElementById('upload');
+
+        captureButton.addEventListener('click', () => {
+            // Capture a photo from the video feed
+            canvas.width = video.videoWidth;
+            canvas.height = video.videoHeight;
+            ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+
+            // Display the captured image
+            capturedImage.src = canvas.toDataURL('image/jpeg');
+            capturedImage.style.display = 'block';
+            
+            // Show the upload button
+            uploadButton.style.display = 'block';
+        });
+
+        uploadButton.addEventListener('click', () => {
+            // Upload the captured image using an API endpoint
+            const imageBase64 = capturedImage.src;
+            fetch('/upload', {
+                method: 'POST',
+                body: JSON.stringify({ image: imageBase64 }),
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': 'Bearer {{ session.google_token[0] }}'
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                // Redirect to the result page with the uploaded image name
+                window.location.href = '/result/' + data.image_name;
+            })
+            .catch(error => {
+                console.error('Error uploading image:', error);
+            });
+        });
+
+        // Access the device camera and display the live feed
+        navigator.mediaDevices.getUserMedia({ video: true })
+            .then(stream => {
+                video.srcObject = stream;
+            })
+            .catch(error => {
+                console.error('Error accessing camera:', error);
+            });
+    </script>
+</body>
+</html>
